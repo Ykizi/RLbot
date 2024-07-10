@@ -1,6 +1,6 @@
 from stable_baselines3 import SAC
 from stable_baselines3.common.callbacks import BaseCallback
-from Task.StaticTask import StaticHandlingEnv
+from BaseTask.StaticTask import StaticHandlingEnv
 from robopal.commons.gym_wrapper import GymWrapper
 
 TRAIN = 1
@@ -16,11 +16,11 @@ class TensorboardCallback(BaseCallback):
 
     def _on_step(self) -> bool:
         if self.n_calls % 51200 == 0:
-            self.model.save(self.log_dir + f"/model_saved/SAC/policy_{self.n_calls}")
+            self.model.save(self.log_dir + f"/StaticTask/model_saved/SAC/policy_{self.n_calls}")
         return True
 
 
-log_dir = "../log/StaticTask"
+log_dir = "../log"
 
 if TRAIN:
     env = StaticHandlingEnv(render_mode='human')
@@ -47,11 +47,11 @@ model = SAC(
 if TRAIN:
     # Train the model
     model.learn(int(5e6), callback=TensorboardCallback(log_dir=log_dir))
-    model.save("./conveyor_handling")
+    model.save(log_dir + f"/StaticTask/Final")
 
 else:
 # Test the model
-    model = SAC.load(log_dir + f"/model_saved/SAC/policy_4966400")
+    model = SAC.load(log_dir + f"/StaticTask/model_saved/SAC/policy_4966400")
     obs, info = env.reset()
     for i in range(int(1e6)):
         action, _states = model.predict(obs)

@@ -1,11 +1,10 @@
 import numpy as np
-
 from robopal.demos.manipulation_tasks.robot_manipulate_dense import ManipulateDenseEnv
 import robopal.commons.transform as T
 from robopal.robots.ur5e import UR5eGrasp
 
 
-class StaticHandlingEnv(ManipulateDenseEnv):
+class GraspHandlingEnv(ManipulateDenseEnv):
 
     def __init__(self,
                  robot=UR5eGrasp,
@@ -22,8 +21,7 @@ class StaticHandlingEnv(ManipulateDenseEnv):
             controller=controller,
         )
         self.name = 'ConveyorHandling-v1'
-
-        self.obs_dim = (22,)
+        self.obs_dim = (22,)  # 更新观测空间维度以包含 One-Hot 编码
         self.goal_dim = (3,)
         self.action_dim = (4,)
 
@@ -39,7 +37,9 @@ class StaticHandlingEnv(ManipulateDenseEnv):
 
     def step(self, action):
         obs, reward, terminated, truncated, info = super().step(action)
-        if self.get_body_pos('green_block')[0] > 1.77:
+        if self.get_body_pos('green_block')[2] > 0.5:
+            terminated = True
+        if self.get_body_pos('green_block')[2] < 0.1:
             terminated = True
         return obs, reward, terminated, truncated, info
 
@@ -81,31 +81,27 @@ class StaticHandlingEnv(ManipulateDenseEnv):
 
     def reset_object(self):
         random_x_pos = np.random.uniform(1.6, 1.75)
-        self.set_object_pose('green_block:joint', np.array([random_x_pos, 0.3, 0.75, 1.0, 0.0, 0.0, 0.0]))
+        self.set_object_pose('green_block:joint', np.array([random_x_pos, 0.3, 0.45, 1.0, 0.0, 0.0, 0.0]))
 
     def compute_rewards(self, info: dict = None, **kwargs):
-        cube2carton = self.goal_distance(self.get_body_pos('green_block'), self.get_body_pos('carton'))
-        if cube2carton >= 0.1:  # cube is not in cartor
-            cube2gripper = self.goal_distance(self.get_body_pos('green_block'), self.get_site_pos('0_grip_site'))
+        cube2gripper = self.goal_distance(self.get_body_pos('green_block'), self.get_site_pos('0_grip_site'))
 
-            if cube2gripper <= 0.02:  # gripper has catched the cube
-                reward = 20 - 10 * cube2carton
-            else:  # cube is near gripper
-                reward = 0 - 10 * cube2gripper
+        if cube2gripper <= 0.02:  # gripper has catched the cube
+            reward = 50
+        else:  # cube is near gripper
+            reward = 0 - 10 * cube2gripper
 
-            reward += 50 * (self.get_body_pos('green_block')[2] - 0.45)
-
-        else:
-            reward = 1000
+        reward += 200 * (self.get_body_pos('green_block')[2] - 0.45)
 
         return reward
 
 
 
 if __name__ == "__main__":
-
-    env = StaticHandlingEnv()
+    env = GraspHandlingEnv()
     env.reset()
+    obs = env.reset()
+    print(obs)  # 检查重置后环境返回的观察值的形状
 
     for t in range(int(1e5)):
         action = np.random.uniform(env.min_action, env.max_action, env.action_dim)
@@ -113,3 +109,23 @@ if __name__ == "__main__":
         if terminated:
             env.reset()
     env.close()
+
+    # # 检查环境的观测空间
+    # env = make_env(env_id)
+    # obs = env.reset()
+    # print(f"Observation shape: {obs.shape}")
+    #
+    # # 确认 obs_dim 与观测空间匹配
+    # self.obs_dim = env.observation_space.shape
+    #
+    # # 确认你的 CustomSAC 传递了正确的参数
+    # model = CustomSAC(
+    #     "MlpPolicy",
+    #     env,
+    #     num_tasks=3,
+    #     task_embedding_dim=10,
+    #     hidden_dim=256
+    # )
+    #
+    # # 调试任务ID的处理
+    # print(f"BaseTask ID: {replay_data.task_ids}")

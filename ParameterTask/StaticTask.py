@@ -1,20 +1,23 @@
 import numpy as np
 
 from robopal.demos.manipulation_tasks.robot_manipulate_dense import ManipulateDenseEnv
-
 import robopal.commons.transform as T
-from robopal.robots.ur5e import UR5eConveyor
-# from environments.ur5e import UR5eConveyor
+from robopal.robots.ur5e import UR5eGrasp
 
-
-class ConveyorHandlingEnv(ManipulateDenseEnv):
+def one_hot_encode(task_id, num_tasks):
+    one_hot_vector = np.zeros(num_tasks)
+    one_hot_vector[task_id] = 1
+    return one_hot_vector
+class StaticHandlingEnv(ManipulateDenseEnv):
 
     def __init__(self,
-                 robot=UR5eConveyor,
+                 robot=UR5eGrasp,
                  render_mode='human',
                  control_freq=20,
                  enable_camera_viewer=False,
                  controller='CARTIK',
+                 task_id=2,
+                 num_tasks=4
                  ):
         super().__init__(
             robot=robot,
@@ -23,9 +26,10 @@ class ConveyorHandlingEnv(ManipulateDenseEnv):
             enable_camera_viewer=enable_camera_viewer,
             controller=controller,
         )
-        self.name = 'ConveyorHandling-v1'
-
-        self.obs_dim = (22,)
+        self.name = 'StaticTask-v2'
+        self.task_id = task_id
+        self.task_one_hot = one_hot_encode(task_id, num_tasks)  # 初始化任务 One-Hot 编码
+        self.obs_dim = (22 + num_tasks,)  # 更新观测空间维度以包含 One-Hot 编码
         self.goal_dim = (3,)
         self.action_dim = (4,)
 
@@ -76,14 +80,16 @@ class ConveyorHandlingEnv(ManipulateDenseEnv):
         )
         obs[21] = self.mj_data.joint('0_robotiq_2f_85_right_driver_joint').qpos[0]
 
+        obs[22:] = self.task_one_hot
+
         return obs.copy()
 
     def _get_info(self) -> dict:
         return {'is_success': self._is_success(self.get_body_pos('green_block'), self.get_body_pos('carton'), th=0.02)}
 
     def reset_object(self):
-        random_x_pos = np.random.uniform(1.45, 1.65)
-        self.set_object_pose('green_block:joint', np.array([random_x_pos, 1.2, 0.45, 1.0, 0.0, 0.0, 0.0]))
+        random_x_pos = np.random.uniform(1.6, 1.75)
+        self.set_object_pose('green_block:joint', np.array([random_x_pos, 0.3, 0.75, 1.0, 0.0, 0.0, 0.0]))
 
     def compute_rewards(self, info: dict = None, **kwargs):
         cube2carton = self.goal_distance(self.get_body_pos('green_block'), self.get_body_pos('carton'))
@@ -103,10 +109,13 @@ class ConveyorHandlingEnv(ManipulateDenseEnv):
         return reward
 
 
-if __name__ == "__main__":
 
-    env = ConveyorHandlingEnv()
+if __name__ == "__main__":
+    task_id = 2
+    env = StaticHandlingEnv()
     env.reset()
+    obs = env.reset()
+    print(obs)  # 检查重置后环境返回的观察值的形状
 
     for t in range(int(1e5)):
         action = np.random.uniform(env.min_action, env.max_action, env.action_dim)

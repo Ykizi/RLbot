@@ -1,6 +1,7 @@
 from stable_baselines3 import SAC
 from stable_baselines3.common.callbacks import BaseCallback
-from Task.ConveyorTask import ConveyorHandlingEnv
+#from BaseTask.ConveyorTask import ConveyorHandlingEnv
+from ParameterTask.ConveyorTask import ConveyorHandlingEnv
 from robopal.commons.gym_wrapper import GymWrapper
 
 TRAIN = 1
@@ -20,7 +21,7 @@ class TensorboardCallback(BaseCallback):
         return True
 
 
-log_dir = "../log/ConveyorTask"
+log_dir = "../log"
 
 if TRAIN:
     env = ConveyorHandlingEnv(render_mode='human')
@@ -36,18 +37,6 @@ model = SAC(
     verbose=1,
     tensorboard_log=log_dir,
 )
-# model = SAC(
-#     'MlpPolicy',
-#     env,
-#     replay_buffer_class=HerReplayBuffer,
-#     # Parameters for HER
-#     replay_buffer_kwargs=dict(
-#         n_sampled_goal=4,
-#         goal_selection_strategy='future',
-#     ),
-#     verbose=1,
-#     tensorboard_log=log_dir,
-# )
 
 # model = DDPG(
 #     'MlpPolicy',
@@ -59,11 +48,11 @@ model = SAC(
 if TRAIN:
     # Train the model
     model.learn(int(5e6), callback=TensorboardCallback(log_dir=log_dir))
-    model.save("./conveyor_handling")
+    model.save(log_dir + f"/ConveyorTask/Final")
 
 else:
 # Test the model
-    model = SAC.load(log_dir + f"/model_saved/SAC/policy_7321600")
+    model = SAC.load(log_dir + f"/ConveyorTask/model_saved/SAC/policy_7321600")
     obs, info = env.reset()
     for i in range(int(1e6)):
         action, _states = model.predict(obs)

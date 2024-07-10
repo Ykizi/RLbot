@@ -1,17 +1,17 @@
 import numpy as np
-
 from robopal.demos.manipulation_tasks.robot_manipulate_dense import ManipulateDenseEnv
 import robopal.commons.transform as T
-from robopal.robots.ur5e import UR5eReach
+from robopal.robots.ur5e import UR5eConveyor
 
-class ReachHandlingEnv(ManipulateDenseEnv):
+
+class ConveyorHandlingEnv(ManipulateDenseEnv):
 
     def __init__(self,
-                 robot=UR5eReach,
+                 robot=UR5eConveyor,
                  render_mode='human',
                  control_freq=20,
                  enable_camera_viewer=False,
-                 controller='CARTIK', 
+                 controller='CARTIK',
                  ):
         super().__init__(
             robot=robot,
@@ -20,7 +20,7 @@ class ReachHandlingEnv(ManipulateDenseEnv):
             enable_camera_viewer=enable_camera_viewer,
             controller=controller,
         )
-        self.name = 'ReachyorHandling'
+        self.name = 'ConveyorTask-v1'
 
         self.obs_dim = (22,)
         self.goal_dim = (3,)
@@ -36,16 +36,11 @@ class ReachHandlingEnv(ManipulateDenseEnv):
         self.grip_max_bound = 0.95
         self.grip_min_bound = 0.0
 
-   
     def step(self, action):
         obs, reward, terminated, truncated, info = super().step(action)
-        dis_cubegripper = self.goal_distance(self.get_body_pos('green_block'), self.get_site_pos('0_grip_site'))
-        if dis_cubegripper <= 0.04:  # gripper near green_block
-            terminated = True
-        if self.get_body_pos('green_block')[2] < 0.1:
+        if self.get_body_pos('green_block')[0] > 1.77:
             terminated = True
         return obs, reward, terminated, truncated, info
-
 
     def _get_obs(self) -> dict:
         """ The observation space is 16-dimensional, with the first 3 dimensions corresponding to the position
@@ -84,20 +79,30 @@ class ReachHandlingEnv(ManipulateDenseEnv):
         return {'is_success': self._is_success(self.get_body_pos('green_block'), self.get_body_pos('carton'), th=0.02)}
 
     def reset_object(self):
-        random_x_pos = np.random.uniform(1.6, 1.7)
-        self.set_object_pose('green_block:joint', np.array([random_x_pos, 0.3, 0.75, 1.0, 0.0, 0.0, 0.0]))
+        random_x_pos = np.random.uniform(1.45, 1.65)
+        self.set_object_pose('green_block:joint', np.array([random_x_pos, 1.2, 0.45, 1.0, 0.0, 0.0, 0.0]))
 
     def compute_rewards(self, info: dict = None, **kwargs):
+        cube2carton = self.goal_distance(self.get_body_pos('green_block'), self.get_body_pos('carton'))
+        if cube2carton >= 0.1:  # cube is not in cartor
+            cube2gripper = self.goal_distance(self.get_body_pos('green_block'), self.get_site_pos('0_grip_site'))
 
-        cube2gripper = self.goal_distance(self.get_body_pos('green_block'), self.get_site_pos('0_grip_site'))
-        reward = -100* cube2gripper  # give higher reward the closer the gripper to the cube
+            if cube2gripper <= 0.02:  # gripper has catched the cube
+                reward = 20 - 10 * cube2carton
+            else:  # cube is near gripper
+                reward = 0 - 10 * cube2gripper
+
+            reward += 50 * (self.get_body_pos('green_block')[2] - 0.45)
+
+        else:
+            reward = 1000
 
         return reward
 
 
 if __name__ == "__main__":
 
-    env = ReachHandlingEnv()
+    env = ConveyorHandlingEnv()
     env.reset()
 
     for t in range(int(1e5)):
