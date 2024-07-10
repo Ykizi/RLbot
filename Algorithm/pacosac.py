@@ -9,7 +9,7 @@ from stable_baselines3.common.policies import BasePolicy, ContinuousCritic
 from stable_baselines3.common.type_aliases import GymEnv, Schedule
 from stable_baselines3.common.utils import get_parameters_by_name
 from stable_baselines3.sac.policies import Actor, CnnPolicy, MlpPolicy, MultiInputPolicy, SACPolicy
-from Paco.paco2.network import ActorDistributionCompositionalNetwork, CompositionalCriticNetwork
+from Algorithm.network import ActorDistributionCompositionalNetwork, CompositionalCriticNetwork
 
 # 定义一个泛型类型SelfSAC，用于类型检查
 SelfSAC = TypeVar("SelfSAC", bound="SAC")
@@ -58,7 +58,7 @@ class CustomSAC(OffPolicyAlgorithm):
         seed: Optional[int] = None,
         device: Union[th.device, str] = "auto",
         _init_setup_model: bool = True,
-        num_tasks: int = 3,  # 任务数量参数
+        num_tasks: int = 4,  # 任务数量参数
         task_embedding_dim: int = 10,  # 任务编码维度参数
         hidden_dim: int = 256  # 隐藏层维度参数
     ):

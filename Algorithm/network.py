@@ -52,6 +52,9 @@ class ActorDistributionCompositionalNetwork(BaseFeaturesExtractor):
         else:
             self._projection_net = CategoricalDistribution(action_space.n)
 
+        # 初始化优化器
+        self.optimizer = th.optim.Adam(self.parameters(), lr=3e-4)
+
     def forward(self, observations, task_id):
         # 获取任务嵌入并生成组合特征
         task_embedding = self.task_encoding_net(task_id)
@@ -62,6 +65,13 @@ class ActorDistributionCompositionalNetwork(BaseFeaturesExtractor):
         # 根据组合特征生成动作分布
         features = self.forward(observations, task_id)
         return self._projection_net.proba_distribution(features)
+
+    def action_log_prob(self, observations, task_id):
+        # 获取动作分布并计算动作及其对应的 log_prob
+        dist = self.get_action_distribution(observations, task_id)
+        actions = dist.sample()
+        log_prob = dist.log_prob(actions)
+        return actions, log_prob
 
 # 组合评论家网络，用于估算 Q 值
 class CompositionalCriticNetwork(th.nn.Module):
@@ -91,6 +101,9 @@ class CompositionalCriticNetwork(th.nn.Module):
             th.nn.ReLU(),
             th.nn.Linear(features_dim, 1)
         )
+
+        # 初始化优化器
+        self.optimizer = th.optim.Adam(self.parameters(), lr=3e-4)
 
     def forward(self, observations, actions, task_id):
         # 获取任务嵌入并生成组合特征

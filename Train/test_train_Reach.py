@@ -4,7 +4,7 @@ from stable_baselines3.common.callbacks import BaseCallback
 from ParameterTask.ReachTask import ReachHandlingEnv
 from robopal.commons.gym_wrapper import GymWrapper
 
-TRAIN = 0
+TRAIN = 1
 
 class TensorboardCallback(BaseCallback):
     """
@@ -31,19 +31,19 @@ else:
 env = GymWrapper(env)
 
 # Initialize the model
+# model = SAC(
+#     'MlpPolicy',
+#     env,
+#     verbose=1,
+#     tensorboard_log=log_dir,
+# )
+
 model = CustomSAC(
     'MlpPolicy',
     env,
     verbose=1,
     tensorboard_log=log_dir,
 )
-
-# model = DDPG(
-#     'MlpPolicy',
-#     env,
-#     verbose=1,
-#     tensorboard_log=log_dir,
-# )
 
 if TRAIN:
     # Train the model
