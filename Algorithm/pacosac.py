@@ -10,6 +10,7 @@ from stable_baselines3.common.type_aliases import GymEnv, Schedule
 from stable_baselines3.common.utils import get_parameters_by_name
 from stable_baselines3.sac.policies import Actor, CnnPolicy, MlpPolicy, MultiInputPolicy, SACPolicy
 from Algorithm.network import ActorDistributionCompositionalNetwork, CompositionalCriticNetwork
+from Algorithm.buffer import CustomReplayBuffer
 
 # 定义一个泛型类型SelfSAC，用于类型检查
 SelfSAC = TypeVar("SelfSAC", bound="SAC")
@@ -42,7 +43,7 @@ class CustomSAC(OffPolicyAlgorithm):
         train_freq: Union[int, Tuple[int, str]] = 1,
         gradient_steps: int = 1,
         action_noise: Optional[ActionNoise] = None,
-        replay_buffer_class: Optional[Type[ReplayBuffer]] = None,
+        replay_buffer_class: Optional[Type[ReplayBuffer]] = CustomReplayBuffer,  # 使用自定义的 ReplayBuffer
         replay_buffer_kwargs: Optional[Dict[str, Any]] = None,
         optimize_memory_usage: bool = False,
         ent_coef: Union[str, float] = "auto",
@@ -168,6 +169,29 @@ class CustomSAC(OffPolicyAlgorithm):
             features_dim=features_dim
         )
 
+    def _store_transition(self, replay_buffer, buffer_action, new_obs, reward, done, infos):
+        """
+        Store transition in the replay buffer.
+        :param replay_buffer: Replay buffer object
+        :param buffer_action: Action to store
+        :param new_obs: New observation
+        :param reward: Reward for the transition
+        :param done: Is the episode done?
+        :param infos: Extra information about the transition
+        """
+        print(f"infos: {infos}")  # 添加打印语句检查 infos 的内容
+
+        # 遍历 infos 列表，获取每个 info 字典中的 task_id
+        for idx, info in enumerate(infos):
+            task_id = info.get('task_id', 0)  # 根据你的环境，修改获取 task_id 的方式
+
+            # 将 transition 添加到 replay buffer 中
+            replay_buffer.add(self._last_obs[idx], new_obs[idx], buffer_action[idx], reward[idx], done[idx], info,
+                              task_id)  # 添加 task_id 参数
+
+        # 更新当前的观测值
+        self._last_obs = new_obs
+
     # 训练方法
     def train(self, gradient_steps: int, batch_size: int = 100) -> None:
         # 设置策略为训练模式
@@ -192,6 +216,7 @@ class CustomSAC(OffPolicyAlgorithm):
             # 计算下一个状态的动作及其对数概率
             with th.no_grad():
                 next_actions, next_log_prob = self.actor.action_log_prob(replay_data.next_observations, replay_data.task_ids)
+
                 # 获取目标Critic网络对下一个状态动作对的Q值
                 next_q_values = th.cat(self.critic_target(replay_data.next_observations, next_actions, replay_data.task_ids), dim=1)
                 next_q_values, _ = th.min(next_q_values, dim=1, keepdim=True)
