@@ -1,10 +1,10 @@
 from stable_baselines3 import SAC
 from stable_baselines3.common.callbacks import BaseCallback
-#from BaseTask.ConveyorTask import ConveyorHandlingEnv
-from ParameterTask.ConveyorTask import ConveyorHandlingEnv
+from BaseTask.ConveyorTask import ConveyorHandlingEnv
+#from ParameterTask.ConveyorTask import ConveyorHandlingEnv
 from robopal.commons.gym_wrapper import GymWrapper
 
-TRAIN = 1
+TRAIN = 0
 
 class TensorboardCallback(BaseCallback):
     """
@@ -21,7 +21,7 @@ class TensorboardCallback(BaseCallback):
         return True
 
 
-log_dir = "../log"
+log_dir = "../log/ConveyorTask"
 
 if TRAIN:
     env = ConveyorHandlingEnv(render_mode='human')
@@ -48,11 +48,11 @@ model = SAC(
 if TRAIN:
     # Train the model
     model.learn(int(5e6), callback=TensorboardCallback(log_dir=log_dir))
-    model.save(log_dir + f"/ConveyorTask/Final")
+    model.save(log_dir + f"/Final")
 
 else:
 # Test the model
-    model = SAC.load(log_dir + f"/ConveyorTask/model_saved/SAC/policy_7321600")
+    model = SAC.load(log_dir + f"/model_saved/SAC/policy_7321600")
     obs, info = env.reset()
     for i in range(int(1e6)):
         action, _states = model.predict(obs)

@@ -17,11 +17,11 @@ class TensorboardCallback(BaseCallback):
 
     def _on_step(self) -> bool:
         if self.n_calls % 51200 == 0:
-            self.model.save(self.log_dir + f"/GraspTask/model_saved/SAC/policy_{self.n_calls}")
+            self.model.save(self.log_dir + f"/model_saved/SAC/policy_{self.n_calls}")
         return True
 
 
-log_dir = "../log"
+log_dir = "../log/GraspTask"
 
 if TRAIN:
     env = GraspHandlingEnv(render_mode='human')
@@ -48,11 +48,11 @@ model = SAC(
 if TRAIN:
     # Train the model
     model.learn(int(5e6), callback=TensorboardCallback(log_dir=log_dir))
-    model.save(log_dir + "/GraspTask/Final")
+    model.save(log_dir + "/Final")
 
 else:
 # Test the model
-    model = SAC.load(log_dir + f"/GraspTask/model_saved/SAC/policy_358400")
+    model = SAC.load(log_dir + f"/model_saved/SAC/policy_358400")
     obs, info = env.reset()
     for i in range(int(1e6)):
         action, _states = model.predict(obs)
