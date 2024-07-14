@@ -179,15 +179,19 @@ class CustomSAC(OffPolicyAlgorithm):
         :param done: Is the episode done?
         :param infos: Extra information about the transition
         """
-        print(f"infos: {infos}")  # 添加打印语句检查 infos 的内容
+        # 检查 infos 的内容
+        if not isinstance(infos, list):
+            raise ValueError(f"Expected infos to be a list of dictionaries, but got: {infos}")
+
+        #print(f"infos: {infos}")
 
         # 遍历 infos 列表，获取每个 info 字典中的 task_id
         for idx, info in enumerate(infos):
             task_id = info.get('task_id', 0)  # 根据你的环境，修改获取 task_id 的方式
 
             # 将 transition 添加到 replay buffer 中
-            replay_buffer.add(self._last_obs[idx], new_obs[idx], buffer_action[idx], reward[idx], done[idx], info,
-                              task_id)  # 添加 task_id 参数
+            replay_buffer.add(self._last_obs[idx], new_obs[idx], buffer_action[idx], reward[idx], done[idx], infos,
+                               task_id=task_id)  # 添加 log_prob 和 task_id 参数
 
         # 更新当前的观测值
         self._last_obs = new_obs
@@ -207,7 +211,7 @@ class CustomSAC(OffPolicyAlgorithm):
         # 进行指定次数的梯度更新
         for _ in range(gradient_steps):
             # 从经验回放缓冲区中采样
-            replay_data = self.replay_buffer.sample(batch_size, env=self._vec_normalize_env)
+            replay_data = self.replay_buffer.sample(batch_size)
 
             # 如果使用随机特征估计，则重置actor的噪声
             if self.use_sde:

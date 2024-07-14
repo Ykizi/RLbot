@@ -8,6 +8,9 @@ class CustomReplayBuffer(ReplayBuffer):
         self.task_ids = np.zeros((buffer_size, n_envs), dtype=np.int32)  # 添加 task_ids 属性
 
     def add(self, obs, next_obs, action, reward, done, infos, task_id):  # 添加 infos 参数
+        # 添加此行进行调试
+        if not isinstance(infos, list) or not all(isinstance(info, dict) for info in infos):
+            raise ValueError(f"Expected infos to be a list of dictionaries, but got: {infos}")
         # 调用父类的 add 方法存储其他数据
         super().add(obs, next_obs, action, reward, done, infos)
         # 存储 task_id

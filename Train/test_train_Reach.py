@@ -24,8 +24,8 @@ class TensorboardCallback(BaseCallback):
 log_dir = "../log/ReachTask"
 
 if TRAIN:
-    env = ReachHandlingEnv(render_mode='human')
-    # env = ConveyorHandlingEnv(render_mode=None)
+    #env = ReachHandlingEnv(render_mode='human')
+    env = ReachHandlingEnv(render_mode=None)
 else:
     env = ReachHandlingEnv(render_mode='human')
 env = GymWrapper(env)

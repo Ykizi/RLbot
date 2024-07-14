@@ -24,8 +24,8 @@ class TensorboardCallback(BaseCallback):
 log_dir = "../log/GraspTask"
 
 if TRAIN:
-    env = GraspHandlingEnv(render_mode='human')
-    #env = GraspHandlingEnv(render_mode=None)
+    #env = GraspHandlingEnv(render_mode='human')
+    env = GraspHandlingEnv(render_mode=None)
 else:
     env = GraspHandlingEnv(render_mode='human')
 env = GymWrapper(env)
