@@ -45,7 +45,7 @@ class GraspHandlingEnv(ManipulateDenseEnv):
 
     def step(self, action):
         obs, reward, terminated, truncated, info = super().step(action)
-        if self.get_body_pos('green_block')[2] > 0.5:
+        if self.get_body_pos('green_block')[2] > 0.6:
             terminated = True
         if self.get_body_pos('green_block')[2] < 0.1:
             terminated = True
@@ -101,7 +101,7 @@ class GraspHandlingEnv(ManipulateDenseEnv):
         else:  # cube is near gripper
             reward = 0 - 10 * cube2gripper
 
-        reward += 200 * (self.get_body_pos('green_block')[2] - 0.45)
+        reward += 2000 * (self.get_body_pos('green_block')[2] - 0.45)
 
         return reward
 

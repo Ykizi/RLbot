@@ -53,7 +53,7 @@ class ReachHandlingEnv(ManipulateDenseEnv):
             info = {}
 
         # 将当前任务 ID 设置到 info 字典中
-        info['task_id'] = self.task_id  # 注意这里使用的是 self.current_task_id 而不是 self.task_id
+        info['task_id'] = self.task_id
 
         # 计算 gripper 和 green_block 之间的距离
         dis_cubegripper = self.goal_distance(self.get_body_pos('green_block'), self.get_site_pos('0_grip_site'))
@@ -64,7 +64,7 @@ class ReachHandlingEnv(ManipulateDenseEnv):
         if self.get_body_pos('green_block')[2] < 0.1:
             terminated = True
 
-        # 可以在这里调用 _get_info() 来获取额外的信息并更新到 info 字典中
+        # 调用 _get_info() 来获取额外的信息并更新到 info 字典中
         # info.update(self._get_info())
 
         return obs, reward, terminated, truncated, info

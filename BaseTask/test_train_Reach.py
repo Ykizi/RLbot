@@ -1,9 +1,10 @@
 from stable_baselines3 import SAC
+from Algorithm.pacosac import CustomSAC
 from stable_baselines3.common.callbacks import BaseCallback
-from BaseTask.StaticTask import StaticHandlingEnv
+from BaseTask.ReachTask import ReachHandlingEnv
 from robopal.commons.gym_wrapper import GymWrapper
 
-TRAIN = 0
+TRAIN = 1
 
 class TensorboardCallback(BaseCallback):
     """
@@ -16,20 +17,29 @@ class TensorboardCallback(BaseCallback):
 
     def _on_step(self) -> bool:
         if self.n_calls % 51200 == 0:
+            # self.model.save(self.log_dir + f"/model_saved/CustomSAC/policy_{self.n_calls}")
             self.model.save(self.log_dir + f"/model_saved/SAC/policy_{self.n_calls}")
         return True
 
 
-log_dir = "../log/StaticTask"
+log_dir = "../log/ReachTask"
 
 if TRAIN:
-    env = StaticHandlingEnv(render_mode='human')
-    #env = StaticHandlingEnv(render_mode=None)
+    env = ReachHandlingEnv(render_mode='human')
+    #env = ReachHandlingEnv(render_mode=None)
 else:
-    env = StaticHandlingEnv(render_mode='human')
+    env = ReachHandlingEnv(render_mode='human')
 env = GymWrapper(env)
 
 # Initialize the model
+# model = SAC(
+#     'MlpPolicy',
+#     env,
+#     verbose=1,
+#     tensorboard_log=log_dir,
+# )
+
+#model = CustomSAC(
 model = SAC(
     'MlpPolicy',
     env,
@@ -37,21 +47,15 @@ model = SAC(
     tensorboard_log=log_dir,
 )
 
-# model = DDPG(
-#     'MlpPolicy',
-#     env,
-#     verbose=1,
-#     tensorboard_log=log_dir,
-# )
-
 if TRAIN:
     # Train the model
-    model.learn(int(5e6), callback=TensorboardCallback(log_dir=log_dir))
-    model.save(log_dir + f"/Final")
+    model.learn(int(1e6), callback=TensorboardCallback(log_dir=log_dir))
+    model.save(log_dir + "/Final/SAC")
 
 else:
 # Test the model
-    model = SAC.load(log_dir + f"/model_saved/SAC/policy_3993600")
+#     model = SAC.load(log_dir + f"/model_saved/SAC/policy_4966400")
+    model = CustomSAC.load(log_dir + "/Final")
     obs, info = env.reset()
     for i in range(int(1e6)):
         action, _states = model.predict(obs)

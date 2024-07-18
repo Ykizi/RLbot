@@ -15,7 +15,9 @@ class TaskEncodingNetwork(th.nn.Module):
 
     def forward(self, task_id):
         # 根据任务 ID 返回相应的嵌入
-        return self.task_embedding(task_id)
+        embedding = self.task_embedding(task_id)
+        # 使用 view 重塑张量形状
+        return embedding.view(embedding.size(0), -1).float()
 
 # 组合编码网络，用于结合观察和任务嵌入生成特征
 class CompositionalEncodingNetwork(th.nn.Module):
@@ -27,7 +29,7 @@ class CompositionalEncodingNetwork(th.nn.Module):
 
     def forward(self, obs, task_embedding):
         # 将观察和任务嵌入连接起来，输入到全连接层中
-        x = th.cat([obs, task_embedding], dim=-1)
+        x = th.cat([obs, task_embedding], dim=-1).float()
         x = F.relu(self.fc1(x))
         x = F.relu(self.fc2(x))
         return x
@@ -55,6 +57,10 @@ class ActorDistributionCompositionalNetwork(BaseFeaturesExtractor):
         # 初始化优化器
         self.optimizer = th.optim.Adam(self.parameters(), lr=3e-4)
 
+        # 均值和对数标准差的全连接层
+        self.mean_net = th.nn.Linear(hidden_dim, action_space.shape[0])
+        self.log_std_net = th.nn.Linear(hidden_dim, action_space.shape[0])
+
     def forward(self, observations, task_id):
         # 获取任务嵌入并生成组合特征
         task_embedding = self.task_encoding_net(task_id)
@@ -64,13 +70,16 @@ class ActorDistributionCompositionalNetwork(BaseFeaturesExtractor):
     def get_action_distribution(self, observations, task_id):
         # 根据组合特征生成动作分布
         features = self.forward(observations, task_id)
-        return self._projection_net.proba_distribution(features)
+        mean = self.mean_net(features)
+        log_std = self.log_std_net(features)
+        log_std = th.clamp(log_std, min=-20, max=2)  # 限制 log_std 的范围
+        return self._projection_net.proba_distribution(mean, log_std)
 
     def action_log_prob(self, observations, task_id):
         # 获取动作分布并计算动作及其对应的 log_prob
         dist = self.get_action_distribution(observations, task_id)
         actions = dist.sample()
-        log_prob = dist.log_prob(actions)
+        log_prob = dist.log_prob(actions).sum(dim=-1)
         return actions, log_prob
 
 # 组合评论家网络，用于估算 Q 值

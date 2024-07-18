@@ -17,6 +17,7 @@ class TensorboardCallback(BaseCallback):
 
     def _on_step(self) -> bool:
         if self.n_calls % 51200 == 0:
+            # self.model.save(self.log_dir + f"/model_saved/CustomSAC/policy_{self.n_calls}")
             self.model.save(self.log_dir + f"/model_saved/SAC/policy_{self.n_calls}")
         return True
 
@@ -24,8 +25,8 @@ class TensorboardCallback(BaseCallback):
 log_dir = "../log/ReachTask"
 
 if TRAIN:
-    #env = ReachHandlingEnv(render_mode='human')
-    env = ReachHandlingEnv(render_mode=None)
+    env = ReachHandlingEnv(render_mode='human')
+    #env = ReachHandlingEnv(render_mode=None)
 else:
     env = ReachHandlingEnv(render_mode='human')
 env = GymWrapper(env)
@@ -38,7 +39,8 @@ env = GymWrapper(env)
 #     tensorboard_log=log_dir,
 # )
 
-model = CustomSAC(
+#model = CustomSAC(
+model = SAC(
     'MlpPolicy',
     env,
     verbose=1,
@@ -47,12 +49,13 @@ model = CustomSAC(
 
 if TRAIN:
     # Train the model
-    model.learn(int(5e6), callback=TensorboardCallback(log_dir=log_dir))
-    model.save(log_dir + f"/Final")
+    model.learn(int(1e6), callback=TensorboardCallback(log_dir=log_dir))
+    model.save(log_dir + "/Final/SAC")
 
 else:
 # Test the model
-    model = SAC.load(log_dir + f"/model_saved/SAC/policy_102400")
+#     model = SAC.load(log_dir + f"/model_saved/SAC/policy_4966400")
+    model = CustomSAC.load(log_dir + "/Final")
     obs, info = env.reset()
     for i in range(int(1e6)):
         action, _states = model.predict(obs)

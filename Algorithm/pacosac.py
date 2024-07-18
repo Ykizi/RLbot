@@ -97,7 +97,7 @@ class CustomSAC(OffPolicyAlgorithm):
             support_multi_env=True,
         )
 
-        # 设置目标熵和熵系数相关的变量
+        # 设置目标熵和熵系数
         self.target_entropy = target_entropy
         self.log_ent_coef = None  # type: Optional[th.Tensor]
         self.ent_coef = ent_coef
@@ -112,11 +112,11 @@ class CustomSAC(OffPolicyAlgorithm):
     def _setup_model(self) -> None:
         super()._setup_model()
         self._create_aliases()
-        # 获取critic和critic_target中批量归一化层的参数
+        # 获取 critic 和 critic_target 中批量归一化层的参数
         self.batch_norm_stats = get_parameters_by_name(self.critic, ["running_"])
         self.batch_norm_stats_target = get_parameters_by_name(self.critic_target, ["running_"])
 
-        # 自动设置目标熵值，如果指定为"auto"
+        # 自动设置目标熵值，如果指定为 "auto"
         if self.target_entropy == "auto":
             self.target_entropy = float(-np.prod(self.env.action_space.shape).astype(np.float32))  # type: ignore
         else:
@@ -128,10 +128,12 @@ class CustomSAC(OffPolicyAlgorithm):
             if "_" in self.ent_coef:
                 init_value = float(self.ent_coef.split("_")[1])
                 assert init_value > 0.0, "The initial value of ent_coef must be greater than 0"
-            # 创建一个可训练的张量log_ent_coef
+            # 创建一个可训练的张量 log_ent_coef
             self.log_ent_coef = th.log(th.ones(1, device=self.device) * init_value).requires_grad_(True)
-            # 创建一个Adam优化器来优化log_ent_coef
+            # 创建一个 Adam 优化器来优化 log_ent_coef
             self.ent_coef_optimizer = th.optim.Adam([self.log_ent_coef], lr=self.lr_schedule(1))
+            # 初始化熵系数张量
+            self.ent_coef_tensor = self.log_ent_coef.exp().detach()
         else:
             # 如果指定了固定的熵系数，则将其转换为张量
             self.ent_coef_tensor = th.tensor(float(self.ent_coef), device=self.device)
@@ -187,7 +189,7 @@ class CustomSAC(OffPolicyAlgorithm):
 
         # 遍历 infos 列表，获取每个 info 字典中的 task_id
         for idx, info in enumerate(infos):
-            task_id = info.get('task_id', 0)  # 根据你的环境，修改获取 task_id 的方式
+            task_id = info.get('task_id', 0)
 
             # 将 transition 添加到 replay buffer 中
             replay_buffer.add(self._last_obs[idx], new_obs[idx], buffer_action[idx], reward[idx], done[idx], infos,
@@ -198,6 +200,11 @@ class CustomSAC(OffPolicyAlgorithm):
 
     # 训练方法
     def train(self, gradient_steps: int, batch_size: int = 100) -> None:
+        # 确保 ent_coef_tensor 被正确初始化
+        if self.ent_coef_optimizer is None:
+            if self.ent_coef_tensor is None:
+                self.ent_coef_tensor = th.tensor(float(self.ent_coef), device=self.device)
+
         # 设置策略为训练模式
         self.policy.set_training_mode(True)
         # 获取需要优化的优化器列表
@@ -206,7 +213,7 @@ class CustomSAC(OffPolicyAlgorithm):
 
         # 初始化损失和系数的列表
         ent_coef_losses, ent_coefs = [], []
-        actor_losses, critic_losses = [], []
+        actor_losses, critic_losses = [], []  # 初始化 actor_losses 和 critic_losses 列表
 
         # 进行指定次数的梯度更新
         for _ in range(gradient_steps):
@@ -219,22 +226,25 @@ class CustomSAC(OffPolicyAlgorithm):
 
             # 计算下一个状态的动作及其对数概率
             with th.no_grad():
-                next_actions, next_log_prob = self.actor.action_log_prob(replay_data.next_observations, replay_data.task_ids)
+                next_actions, next_log_prob = self.actor.action_log_prob(replay_data[0].next_observations,
+                                                                         replay_data[1])
 
                 # 获取目标Critic网络对下一个状态动作对的Q值
-                next_q_values = th.cat(self.critic_target(replay_data.next_observations, next_actions, replay_data.task_ids), dim=1)
+                next_q_values = th.cat(
+                    self.critic_target(replay_data[0].next_observations, next_actions, replay_data[1]), dim=1)
                 next_q_values, _ = th.min(next_q_values, dim=1, keepdim=True)
                 # 计算目标Q值
-                target_q_values = replay_data.rewards + (1 - replay_data.dones) * self.gamma * (next_q_values - self.ent_coef_tensor * next_log_prob)
+                target_q_values = replay_data[0].rewards + (1 - replay_data[0].dones) * self.gamma * (
+                            next_q_values - self.ent_coef_tensor * next_log_prob)
 
             # 获取当前Critic网络的Q值
-            current_q_values = self.critic(replay_data.observations, replay_data.actions, replay_data.task_ids)
+            current_q_values = self.critic(replay_data[0].observations, replay_data[0].actions, replay_data[1])
             # 计算Critic的损失
             critic_loss = sum(th.nn.functional.mse_loss(current_q, target_q_values) for current_q in current_q_values)
 
             # 计算Actor网络的动作和对数概率
-            actor_actions, log_prob = self.actor.action_log_prob(replay_data.observations, replay_data.task_ids)
-            q_values_pi = th.cat(self.critic(replay_data.observations, actor_actions, replay_data.task_ids), dim=1)
+            actor_actions, log_prob = self.actor.action_log_prob(replay_data[0].observations, replay_data[1])
+            q_values_pi = th.cat(self.critic(replay_data[0].observations, actor_actions, replay_data[1]), dim=1)
             min_qf_pi, _ = th.min(q_values_pi, dim=1, keepdim=True)
             # 计算Actor的损失
             actor_loss = (self.ent_coef_tensor * log_prob - min_qf_pi).mean()

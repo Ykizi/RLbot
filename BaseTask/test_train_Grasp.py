@@ -1,6 +1,6 @@
 from stable_baselines3 import SAC
 from stable_baselines3.common.callbacks import BaseCallback
-from BaseTask.StaticTask import StaticHandlingEnv
+from BaseTask.GraspTask import GraspHandlingEnv
 from robopal.commons.gym_wrapper import GymWrapper
 
 TRAIN = 0
@@ -20,13 +20,13 @@ class TensorboardCallback(BaseCallback):
         return True
 
 
-log_dir = "../log/StaticTask"
+log_dir = "../log/GraspTask"
 
 if TRAIN:
-    env = StaticHandlingEnv(render_mode='human')
-    #env = StaticHandlingEnv(render_mode=None)
+    env = GraspHandlingEnv(render_mode='human')
+    #env = GraspHandlingEnv(render_mode=None)
 else:
-    env = StaticHandlingEnv(render_mode='human')
+    env = GraspHandlingEnv(render_mode='human')
 env = GymWrapper(env)
 
 # Initialize the model
@@ -46,12 +46,13 @@ model = SAC(
 
 if TRAIN:
     # Train the model
+    #model = SAC.load(log_dir + f"/Final/SAC" , env=env )
     model.learn(int(5e6), callback=TensorboardCallback(log_dir=log_dir))
-    model.save(log_dir + f"/Final")
+    model.save(log_dir + "/Final")
 
 else:
 # Test the model
-    model = SAC.load(log_dir + f"/model_saved/SAC/policy_3993600")
+    model = SAC.load(log_dir + f"/model_saved/SAC/policy_204800")
     obs, info = env.reset()
     for i in range(int(1e6)):
         action, _states = model.predict(obs)

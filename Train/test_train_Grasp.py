@@ -1,10 +1,11 @@
 from stable_baselines3 import SAC
 from Algorithm.pacosac import CustomSAC
 from stable_baselines3.common.callbacks import BaseCallback
+# from ParameterTask.GraspTask import GraspHandlingEnv
 from BaseTask.GraspTask import GraspHandlingEnv
 from robopal.commons.gym_wrapper import GymWrapper
 
-TRAIN = 1
+TRAIN = 0
 
 class TensorboardCallback(BaseCallback):
     """
@@ -24,8 +25,8 @@ class TensorboardCallback(BaseCallback):
 log_dir = "../log/GraspTask"
 
 if TRAIN:
-    #env = GraspHandlingEnv(render_mode='human')
-    env = GraspHandlingEnv(render_mode=None)
+    env = GraspHandlingEnv(render_mode='human')
+    #env = GraspHandlingEnv(render_mode=None)
 else:
     env = GraspHandlingEnv(render_mode='human')
 env = GymWrapper(env)
@@ -47,12 +48,13 @@ model = SAC(
 
 if TRAIN:
     # Train the model
+    #model = SAC.load(log_dir + f"/Final/SAC" , env=env )
     model.learn(int(5e6), callback=TensorboardCallback(log_dir=log_dir))
     model.save(log_dir + "/Final")
 
 else:
 # Test the model
-    model = SAC.load(log_dir + f"/model_saved/SAC/policy_358400")
+    model = SAC.load(log_dir + f"/model_saved/SAC/policy_204800")
     obs, info = env.reset()
     for i in range(int(1e6)):
         action, _states = model.predict(obs)

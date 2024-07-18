@@ -21,7 +21,7 @@ class GraspHandlingEnv(ManipulateDenseEnv):
             controller=controller,
         )
         self.name = 'ConveyorHandling-v1'
-        self.obs_dim = (22,)  # 更新观测空间维度以包含 One-Hot 编码
+        self.obs_dim = (22,)
         self.goal_dim = (3,)
         self.action_dim = (4,)
 
@@ -84,17 +84,31 @@ class GraspHandlingEnv(ManipulateDenseEnv):
         self.set_object_pose('green_block:joint', np.array([random_x_pos, 0.3, 0.45, 1.0, 0.0, 0.0, 0.0]))
 
     def compute_rewards(self, info: dict = None, **kwargs):
-        cube2gripper = self.goal_distance(self.get_body_pos('green_block'), self.get_site_pos('0_grip_site'))
+        # 获取方块和夹爪的位置
+        gripper_pos = self.get_site_pos('0_grip_site')
+        block_pos = self.get_body_pos('green_block')
 
-        if cube2gripper <= 0.02:  # gripper has catched the cube
-            reward = 50
-        else:  # cube is near gripper
-            reward = 0 - 10 * cube2gripper
+        # 计算夹爪与方块的距离
+        distance = np.linalg.norm(gripper_pos - block_pos)
 
-        reward += 200 * (self.get_body_pos('green_block')[2] - 0.45)
+        # 距离奖励
+        distance_reward = -10*distance
+
+        # 抓取奖励
+        grip_action = self.mj_data.joint('0_robotiq_2f_85_right_driver_joint').qpos[0]
+        grip_reward = 0
+        if distance < 0.02 and grip_action > 0.8:
+            grip_reward = 50  # 假设抓取成功给50分奖励
+
+        # 高度奖励
+        height_reward = 0
+        if block_pos[2] > 0.45:
+            height_reward = 1000 * (block_pos[2] - 0.45)
+
+        # 总奖励
+        reward = distance_reward + grip_reward + height_reward
 
         return reward
-
 
 
 if __name__ == "__main__":

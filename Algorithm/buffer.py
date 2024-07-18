@@ -23,6 +23,7 @@ class CustomReplayBuffer(ReplayBuffer):
         batch_inds = np.random.randint(0, max_pos, size=batch_size)
 
         # 将 task_id 添加到采样数据中
-        replay_data.task_ids = th.tensor(self.task_ids[batch_inds]).to(self.device)
-        return replay_data
+        my_sample = {0:replay_data,1:th.tensor(self.task_ids[batch_inds]).to(self.device)}
+        # replay_data.task_ids = th.tensor(self.task_ids[batch_inds]).to(self.device)
+        return my_sample
 

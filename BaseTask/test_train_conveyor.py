@@ -1,6 +1,6 @@
 from stable_baselines3 import SAC
 from stable_baselines3.common.callbacks import BaseCallback
-from BaseTask.StaticTask import StaticHandlingEnv
+from BaseTask.ConveyorTask import ConveyorHandlingEnv
 from robopal.commons.gym_wrapper import GymWrapper
 
 TRAIN = 0
@@ -20,13 +20,13 @@ class TensorboardCallback(BaseCallback):
         return True
 
 
-log_dir = "../log/StaticTask"
+log_dir = "../log/ConveyorTask"
 
 if TRAIN:
-    env = StaticHandlingEnv(render_mode='human')
-    #env = StaticHandlingEnv(render_mode=None)
+    env = ConveyorHandlingEnv(render_mode='human')
+    # env = ConveyorHandlingEnv(render_mode=None)
 else:
-    env = StaticHandlingEnv(render_mode='human')
+    env = ConveyorHandlingEnv(render_mode='human')
 env = GymWrapper(env)
 
 # Initialize the model
@@ -51,7 +51,7 @@ if TRAIN:
 
 else:
 # Test the model
-    model = SAC.load(log_dir + f"/model_saved/SAC/policy_3993600")
+    model = SAC.load(log_dir + f"/model_saved/SAC/policy_7321600")
     obs, info = env.reset()
     for i in range(int(1e6)):
         action, _states = model.predict(obs)
