@@ -1,6 +1,6 @@
-from stable_baselines3 import SAC
+from Algorithm.pacosac import CustomSAC
 from stable_baselines3.common.callbacks import BaseCallback
-from BaseTask.StaticTask import StaticHandlingEnv
+from ParameterTask.StaticTask import StaticHandlingEnv
 from robopal.commons.gym_wrapper import GymWrapper
 
 TRAIN = 0
@@ -16,11 +16,11 @@ class TensorboardCallback(BaseCallback):
 
     def _on_step(self) -> bool:
         if self.n_calls % 51200 == 0:
-            self.model.save(self.log_dir + f"/model_saved/SAC/policy_{self.n_calls}")
+            self.model.save(self.log_dir + f"/model_saved/policy_{self.n_calls}")
         return True
 
 
-log_dir = "../log/StaticTask"
+log_dir = "../log/StaticTask/PCSAC"
 
 if TRAIN:
     env = StaticHandlingEnv(render_mode='human')
@@ -30,7 +30,7 @@ else:
 env = GymWrapper(env)
 
 # Initialize the model
-model = SAC(
+model = CustomSAC(
     'MlpPolicy',
     env,
     verbose=1,
@@ -51,7 +51,7 @@ if TRAIN:
 
 else:
 # Test the model
-    model = SAC.load(log_dir + f"/model_saved/SAC/policy_3993600")
+    model = CustomSAC.load(log_dir + f"/model_saved/policy_153600")
     obs, info = env.reset()
     for i in range(int(1e6)):
         action, _states = model.predict(obs)

@@ -94,14 +94,29 @@ class GraspHandlingEnv(ManipulateDenseEnv):
         self.set_object_pose('green_block:joint', np.array([random_x_pos, 0.3, 0.45, 1.0, 0.0, 0.0, 0.0]))
 
     def compute_rewards(self, info: dict = None, **kwargs):
-        cube2gripper = self.goal_distance(self.get_body_pos('green_block'), self.get_site_pos('0_grip_site'))
+        # 获取方块和夹爪的位置
+        gripper_pos = self.get_site_pos('0_grip_site')
+        block_pos = self.get_body_pos('green_block')
 
-        if cube2gripper <= 0.02:  # gripper has catched the cube
-            reward = 50
-        else:  # cube is near gripper
-            reward = 0 - 10 * cube2gripper
+        # 计算夹爪与方块的距离
+        distance = np.linalg.norm(gripper_pos - block_pos)
 
-        reward += 2000 * (self.get_body_pos('green_block')[2] - 0.45)
+        # 距离奖励：鼓励夹爪靠近方块，但避免过度靠近
+        distance_reward = -5 * max(0, distance - 0.05)
+
+        # 抓取奖励：当夹爪与方块的距离很近且夹爪夹紧时给予奖励
+        grip_action = self.mj_data.joint('0_robotiq_2f_85_right_driver_joint').qpos[0]
+        grip_reward = 0
+        if distance < 0.02 and grip_action > 0.6:
+            grip_reward = 50  # 成功夹紧物体给予固定奖励
+
+        # 高度奖励：鼓励物体被提升，但奖励值降低
+        height_reward = 0
+        if block_pos[2] > 0.45:
+            height_reward = 200 * (block_pos[2] - 0.45)
+
+        # 计算总奖励
+        reward = distance_reward + grip_reward + height_reward
 
         return reward
 

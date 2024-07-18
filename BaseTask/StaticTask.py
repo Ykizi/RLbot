@@ -92,7 +92,7 @@ class StaticHandlingEnv(ManipulateDenseEnv):
             else:  # cube is near gripper
                 reward = 0 - 10 * cube2gripper
 
-            reward += 50 * (self.get_body_pos('green_block')[2] - 0.45)
+            reward += 200 * (self.get_body_pos('green_block')[2] - 0.45)
 
         else:
             reward = 1000

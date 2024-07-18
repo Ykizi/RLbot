@@ -91,22 +91,23 @@ class GraspHandlingEnv(ManipulateDenseEnv):
         # 计算夹爪与方块的距离
         distance = np.linalg.norm(gripper_pos - block_pos)
 
-        # 距离奖励
-        distance_reward = -10*distance
+        # 距离奖励：鼓励夹爪靠近方块，但避免过度靠近
+        distance_reward = -5 * max(0, distance - 0.05)
 
-        # 抓取奖励
+        # 抓取奖励：当夹爪与方块的距离很近且夹爪夹紧时给予奖励
         grip_action = self.mj_data.joint('0_robotiq_2f_85_right_driver_joint').qpos[0]
         grip_reward = 0
-        if distance < 0.02 and grip_action > 0.8:
-            grip_reward = 50  # 假设抓取成功给50分奖励
+        if distance < 0.02 and grip_action > 0.6:
+            grip_reward = 50  # 成功夹紧物体给予固定奖励
 
-        # 高度奖励
+        # 高度奖励：鼓励物体被提升，但奖励值降低
         height_reward = 0
         if block_pos[2] > 0.45:
-            height_reward = 1000 * (block_pos[2] - 0.45)
+            height_reward = 200 * (block_pos[2] - 0.45)
 
-        # 总奖励
+        # 计算总奖励
         reward = distance_reward + grip_reward + height_reward
+
 
         return reward
 

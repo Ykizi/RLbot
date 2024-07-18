@@ -16,11 +16,11 @@ class TensorboardCallback(BaseCallback):
 
     def _on_step(self) -> bool:
         if self.n_calls % 51200 == 0:
-            self.model.save(self.log_dir + f"/model_saved/SAC/policy_{self.n_calls}")
+            self.model.save(self.log_dir + f"/model_saved/policy_{self.n_calls}")
         return True
 
 
-log_dir = "../log/ConveyorTask"
+log_dir = "../log/ConveyorTask/SAC"
 
 if TRAIN:
     env = ConveyorHandlingEnv(render_mode='human')
@@ -51,7 +51,7 @@ if TRAIN:
 
 else:
 # Test the model
-    model = SAC.load(log_dir + f"/model_saved/SAC/policy_7321600")
+    model = SAC.load(log_dir + f"/model_saved/policy_7321600")
     obs, info = env.reset()
     for i in range(int(1e6)):
         action, _states = model.predict(obs)
